@@ -1,0 +1,30 @@
+body {
+    background: #C4C4C4;
+
+}
+
+.dropdown {
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dropdown-container {
+    width: 500px;
+    height: 220px;
+
+
+}
+
+.search {
+    width: 500px;
+    height: 61px;
+
+}
+
+.repo {
+    display: flex;
+    flex-direction: column;
+    width: 503px;
+}
