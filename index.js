@@ -15,20 +15,46 @@ body.appendChild(createDiv);
 
 // Очистка Input
 function removeClear() {
-  createInput.innerHTML = "";
+  createInput.value = " ";
 }
 
-createInput.addEventListener("click", (e) => {
-  let target = e.target;
-});
+//Очистка dropdown-container
+function clearList() {
+  createDivContainer.innerHTML = "";
+}
+const debounce = (fn, debounceTime) => {
+  let timeoutId;
 
+  return function (...args) {
+    clearTimeout(timeoutId);
+
+    timeoutId = setTimeout(() => {
+      fn.apply(this, args);
+    }, debounceTime);
+  };
+};
+
+// Добавление новых карточек
 const addCard = (item) => {
   let name = item.name;
   let owner = item.owner.login;
   let stars = item.stargazers_count;
-  createRepoCard.innerHTML += `<div class="chosen">Name: ${name}<br>Owner: ${owner}<br>Stars: ${stars}<button class="btn-close"></button></div>`;
+  const newCard = document.createElement("div");
+  newCard.classList.add("chosen");
+  newCard.innerHTML = `Name: ${name}<br>Owner: ${owner}<br>Stars: ${stars}<button class="btn-close"></button>`;
+
+  newCard.querySelector(".btn-close").addEventListener("click", () => {
+    newCard.remove();
+  });
+
+  createRepoCard.appendChild(newCard);
+
+  removeClear();
+
+  clearList();
 };
 
+// Запрос на сервер
 const getRepos = async (request) => {
   return await fetch(
     `https://api.github.com/search/repositories?q=${request}`,
@@ -40,20 +66,30 @@ const getRepos = async (request) => {
   ).then((response) => {
     if (response.ok) {
       response.json().then((repos) => {
-        createDiv.innerHTML = "";
+        createDivContainer.innerHTML = "";
         const items = repos.items.slice(0, 5);
         if (items.length === 0) {
-          createDiv.innerHTML = '<p class="no-results">No results...</p>';
+          createDivContainer.innerHTML =
+            '<p class="no-results">No results...</p>';
         } else {
           items.forEach((item) => {
             const choice = document.createElement("p");
             choice.className = "choice";
             choice.textContent = `${item.name}`;
             choice.addEventListener("click", () => addCard(item));
-            createDiv.append(choice);
+            createDivContainer.append(choice);
           });
         }
       });
     }
   });
 };
+
+const debounceGetRepos = debounce(getRepos, 500);
+
+createInput.addEventListener("input", () => {
+  if (createInput.value === " ") {
+    return;
+  }
+  debounceGetRepos(createInput.value);
+});
