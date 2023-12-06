@@ -22,15 +22,24 @@ function removeClear() {
 function clearList() {
   createDivContainer.innerHTML = "";
 }
+
 const debounce = (fn, debounceTime) => {
   let timeoutId;
+  let lastInputValue;
 
   return function (...args) {
+    const currentInputValue = args[0];
+
     clearTimeout(timeoutId);
 
-    timeoutId = setTimeout(() => {
-      fn.apply(this, args);
-    }, debounceTime);
+    if (currentInputValue !== lastInputValue) {
+      timeoutId = setTimeout(() => {
+        if (timeoutId) {
+          fn(currentInputValue);
+          lastInputValue = currentInputValue;
+        }
+      }, debounceTime);
+    }
   };
 };
 
@@ -56,40 +65,57 @@ const addCard = (item) => {
 
 // Запрос на сервер
 const getRepos = async (request) => {
-  return await fetch(
-    `https://api.github.com/search/repositories?q=${request}`,
-    {
-      headers: {
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
+  try {
+    if (!request.trim()) {
+      clearList();
+      return;
     }
-  ).then((response) => {
-    if (response.ok) {
-      response.json().then((repos) => {
-        createDivContainer.innerHTML = "";
-        const items = repos.items.slice(0, 5);
-        if (items.length === 0) {
-          createDivContainer.innerHTML =
-            '<p class="no-results">No results...</p>';
-        } else {
-          items.forEach((item) => {
-            const choice = document.createElement("p");
-            choice.className = "choice";
-            choice.textContent = `${item.name}`;
-            choice.addEventListener("click", () => addCard(item));
-            createDivContainer.append(choice);
-          });
-        }
+
+    const response = await fetch(
+      `https://api.github.com/search/repositories?q=${request}`,
+      {
+        headers: {
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data. Status: ${response.status}`);
+    }
+
+    const repos = await response.json();
+    createDivContainer.innerHTML = "";
+    const items = repos.items.slice(0, 5);
+    if (items.length === 0) {
+      createDivContainer.innerHTML = '<p class="no-results">No results...</p>';
+    } else {
+      items.forEach((item) => {
+        const choice = document.createElement("p");
+        choice.className = "choice";
+        choice.textContent = `${item.name}`;
+        choice.addEventListener("click", () => addCard(item));
+        createDivContainer.append(choice);
       });
     }
-  });
+  } catch (error) {
+    console.error("Error during fetch:", error.message);
+    createDivContainer.innerHTML = `<p class="error-message">Error fetching data: ${error.message}</p>`;
+  }
 };
-
-const debounceGetRepos = debounce(getRepos, 500);
+const debounceGetRepos = debounce(getRepos, 1000);
 
 createInput.addEventListener("input", () => {
-  if (createInput.value === " ") {
+  const inputValue = createInput.value.trim();
+
+  if (createInput.value[0] === "") {
+    clearList();
     return;
   }
-  debounceGetRepos(createInput.value);
+
+  if (inputValue.includes(" ")) {
+    return;
+  }
+
+  debounceGetRepos(inputValue);
 });
